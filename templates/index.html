@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyGuard AI — Physics-Informed AWS Reliability System</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lightCanvas: '#F8FAFC',
+                        lightSidebar: '#FFFFFF',
+                        lightCard: '#FFFFFF',
+                        lightHover: '#F1F5F9',
+                        lightInput: '#F8FAFC',
+                        lightBorder: '#E2E8F0',
+                        lightTextPrimary: '#0F172A',
+                        lightTextSecondary: '#475569',
+                        accentBlue: '#2563EB',
+                        statusHealthy: '#10B981',
+                        statusWarning: '#F59E0B',
+                        statusDanger: '#EF4444',
+                        statusEvent: '#3B82F6'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React 18 & Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Custom Style Overrides -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans h-screen overflow-hidden flex flex-col">
+
+    <!-- React Root Mounting Point -->
+    <div id="root" class="h-full flex flex-col"></div>
+
+    <!-- Application Script -->
+    <script type="text/babel" src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

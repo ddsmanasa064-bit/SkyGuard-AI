@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyGuard AI - Enterprise AWS Telemetry & Anomaly Detection System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- FLOATING TOAST ALERT CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="app-container">
+        
+        <!-- TOP HEADER & BRAND -->
+        <header class="main-header">
+            <div class="brand-section">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1>SKYGUARD AI</h1>
+                    <p class="subtitle">Enterprise AWS Telemetry & Real-Time Alerting Engine</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <!-- AUDIO SIREN TOGGLE & ALERT BELL -->
+                <div class="alert-controls">
+                    <button id="btnSirenToggle" class="btn btn-icon-toggle" title="Toggle Audio Siren Alert">
+                        <span id="sirenIcon">🔔</span>
+                        <span id="sirenLabel">Siren Sound: OFF</span>
+                    </button>
+
+                    <div id="alertBellWrapper" class="alert-bell-wrapper hidden">
+                        <span class="bell-icon">🚨</span>
+                        <span id="unackAlertCount" class="alert-count-badge">0</span>
+                    </div>
+                </div>
+
+                <div class="master-controls">
+                    <button id="btnStart" class="btn btn-primary">▶ Start Simulation</button>
+                    <button id="btnPause" class="btn btn-secondary">⏸ Pause</button>
+                    <button id="btnReset" class="btn btn-outline">↻ Reset</button>
+                </div>
+
+                <div class="station-selector-wrapper">
+                    <label for="stationSelect">STATION:</label>
+                    <select id="stationSelect" class="station-dropdown">
+                        <option value="AWS-001" selected>AWS-001 (Primary)</option>
+                        <option value="AWS-002">AWS-002 (North Region)</option>
+                        <option value="AWS-003">AWS-003 (East Valley)</option>
+                    </select>
+                </div>
+
+                <div class="system-status-badge">
+                    <span class="status-dot"></span>
+                    <span id="systemStatusText">SYSTEM ONLINE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MULTI-TAB NAVIGATION BAR -->
+        <nav class="tab-navigation">
+            <button class="nav-tab active" data-tab="tabTelemetry">
+                <span class="tab-icon">📡</span> Live Telemetry
+            </button>
+            <button class="nav-tab" data-tab="tabStudio">
+                <span class="tab-icon">🧪</span> Anomaly Injection Studio
+            </button>
+            <button class="nav-tab" data-tab="tabAudit">
+                <span class="tab-icon">🔍</span> Detection & XAI Audit
+            </button>
+            <button class="nav-tab" data-tab="tabHardware">
+                <span class="tab-icon">🛠</span> Hardware Diagnostics
+            </button>
+        </nav>
+
+        <!-- GLOBAL TOP KPI CARDS (ALWAYS VISIBLE) -->
+        <section class="kpi-grid">
+            <div class="kpi-card" id="kpiTempCard">
+                <div class="kpi-title">TEMPERATURE</div>
+                <div class="kpi-value"><span id="kpiTemp">--</span> <span class="unit">°C</span></div>
+                <div class="kpi-sub" id="kpiTempSub">Expected: ~31.2 °C</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">ATMOSPHERIC PRESSURE</div>
+                <div class="kpi-value"><span id="kpiPres">--</span> <span class="unit">hPa</span></div>
+                <div class="kpi-sub">Barometric Baseline</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">RELATIVE HUMIDITY</div>
+                <div class="kpi-value"><span id="kpiHum">--</span> <span class="unit">%</span></div>
+                <div class="kpi-sub">Moisture Content</div>
+            </div>
+
+            <div class="kpi-card" id="kpiHealthCard">
+                <div class="kpi-title">SENSOR HEALTH</div>
+                <div class="kpi-value health-text" id="kpiHealth">HEALTHY</div>
+                <div class="kpi-sub" id="kpiHealthSub">AWS-001 Diagnostics</div>
+            </div>
+
+            <div class="kpi-card" id="kpiAnomaliesCard">
+                <div class="kpi-title">ACTIVE ANOMALIES</div>
+                <div class="kpi-value" id="kpiAnomalies">0</div>
+                <div class="kpi-sub">Unacknowledged: <span id="kpiUnackAlerts" class="text-danger">0</span></div>
+            </div>
+        </section>
+
+        <!-- MAIN VIEWS CONTAINER -->
+        <main class="views-container">
+
+            <!-- TAB VIEW 1: LIVE TELEMETRY -->
+            <section id="tabTelemetry" class="tab-view active">
+                <div class="panel-card chart-panel">
+                    <div class="panel-header">
+                        <h3>REAL-TIME SENSOR STREAM TELEMETRY (LAST 40 OBSERVATIONS)</h3>
+                        <span class="live-indicator">● LIVE REFRESH</span>
+                    </div>
+                    <div class="charts-container">
+                        <div class="chart-wrapper">
+                            <h4>Temperature (°C)</h4>
+                            <canvas id="tempChart"></canvas>
+                        </div>
+                        <div class="chart-row-dual">
+                            <div class="chart-wrapper half">
+                                <h4>Atmospheric Pressure (hPa)</h4>
+                                <canvas id="presChart"></canvas>
+                            </div>
+                            <div class="chart-wrapper half">
+                                <h4>Relative Humidity (%)</h4>
+                                <canvas id="humChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB VIEW 2: ANOMALY INJECTION STUDIO -->
+            <section id="tabStudio" class="tab-view">
+                <div class="panel-card studio-panel">
+                    <div class="panel-header">
+                        <h3>ISOLATED ANOMALY INJECTION STUDIO</h3>
+                        <span class="panel-sub-tag">FAULT SIMULATION & EVALUATION PLAYGROUND</span>
+                    </div>
+
+                    <!-- PARAMETER CONTROLS BAR -->
+                    <div class="studio-parameters-bar">
+                        <div class="param-item">
+                            <label for="paramTargetSensor">TARGET SENSOR:</label>
+                            <select id="paramTargetSensor" class="param-dropdown">
+                                <option value="Temperature" selected>Temperature (°C)</option>
+                                <option value="Pressure">Pressure (hPa)</option>
+                                <option value="Humidity">Humidity (%)</option>
+                            </select>
+                        </div>
+
+                        <div class="param-item slider-item">
+                            <div class="param-label-row">
+                                <label for="paramMagnitude">INTENSITY / MAGNITUDE:</label>
+                                <span id="paramMagnitudeVal" class="param-val-badge">1.0x</span>
+                            </div>
+                            <input type="range" id="paramMagnitude" min="0.5" max="3.0" step="0.1" value="1.0" class="param-slider">
+                        </div>
+
+                        <div class="param-item">
+                            <label for="paramDuration">DURATION (TICKS):</label>
+                            <input type="number" id="paramDuration" min="1" max="10" value="1" class="param-number">
+                        </div>
+                    </div>
+
+                    <!-- CATEGORIZED FAULT TRIGGERS GRID -->
+                    <div class="fault-categories-grid">
+                        
+                        <!-- CATEGORY A: POINT FAULTS -->
+                        <div class="fault-category-card">
+                            <div class="category-header">
+                                <span class="cat-icon">⚡</span>
+                                <div>
+                                    <h4>Point Faults</h4>
+                                    <p>Instantaneous single-step sensor spikes & drops</p>
+                                </div>
+                            </div>
+                            <div class="category-buttons">
+                                <button class="btn btn-inject btn-spike" data-type="temperature_spike">
+                                    ⚡ Inject Temperature Spike
+                                </button>
+                                <button class="btn btn-inject btn-drop" data-type="temperature_drop">
+                                    📉 Inject Temperature Drop
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CATEGORY B: PERSISTENT / CONTEXTUAL FAULTS -->
+                        <div class="fault-category-card">
+                            <div class="category-header">
+                                <span class="cat-icon">📈</span>
+                                <div>
+                                    <h4>Persistent & Contextual Faults</h4>
+                                    <p>Gradual sensor drift & frozen transducer states</p>
+                                </div>
+                            </div>
+                            <div class="category-buttons">
+                                <button class="btn btn-inject" data-type="sensor_drift">
+                                    📈 Inject Sensor Drift
+                                </button>
+                                <button class="btn btn-inject" data-type="frozen_sensor">
+                                    ❄ Inject Frozen Sensor
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CATEGORY C: NETWORK / TRANSMISSION -->
+                        <div class="fault-category-card">
+                            <div class="category-header">
+                                <span class="cat-icon">🔌</span>
+                                <div>
+                                    <h4>Network & Transmission</h4>
+                                    <p>Telemetry packet loss & corrupted signals</p>
+                                </div>
+                            </div>
+                            <div class="category-buttons">
+                                <button class="btn btn-inject" data-type="missing_data">
+                                    ⚠ Inject Missing Data (Null)
+                                </button>
+                                <button class="btn btn-inject" data-type="comm_error">
+                                    🔌 Inject Telemetry Error
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ACTIVE INJECTIONS STATUS PANEL -->
+                    <div class="active-injections-panel">
+                        <div class="active-inj-header">
+                            <div>
+                                <h4>ACTIVE INJECTION JOBS</h4>
+                                <p class="text-muted">Current simulated faults propagating through the pipeline</p>
+                            </div>
+                            <button id="btnAbortInjections" class="btn btn-danger-abort">
+                                🛑 Abort / Flush All Injections
+                            </button>
+                        </div>
+
+                        <div class="table-scroll active-inj-scroll">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Job ID</th>
+                                        <th>Station</th>
+                                        <th>Fault Type</th>
+                                        <th>Target Sensor</th>
+                                        <th>Intensity</th>
+                                        <th>Ticks Remaining</th>
+                                        <th>Injected At</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeInjTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-muted text-center">No active injection jobs queued. Select a fault type above to trigger.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- TAB VIEW 3: DETECTION & XAI AUDIT -->
+            <section id="tabAudit" class="tab-view">
+                <div class="audit-grid">
+                    
+                    <!-- LEFT SIDE: ACTIVE ANOMALY ALERT & XAI -->
+                    <div class="audit-column-main">
+                        
+                        <!-- REAL-TIME ANOMALY ALERT PANEL -->
+                        <div class="panel-card anomaly-panel" id="anomalyAlertPanel">
+                            <div class="panel-header">
+                                <h3>LIVE ANOMALY DIAGNOSTIC ALERT</h3>
+                                <div class="alert-header-actions">
+                                    <button id="btnAckActiveAlert" class="btn btn-secondary hidden">✔ Acknowledge Alert</button>
+                                    <span id="anomalyStatusBadge" class="badge badge-success">✓ NORMAL</span>
+                                </div>
+                            </div>
+
+                            <!-- NORMAL STATE DISPLAY -->
+                            <div id="anomalyNormalView" class="anomaly-state-view">
+                                <div class="normal-box">
+                                    <div class="check-icon">✓</div>
+                                    <div class="normal-text">
+                                        <h4>No Anomalies Detected</h4>
+                                        <p>All sensor observations match expected spatio-temporal ML patterns.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ANOMALY ACTIVE DISPLAY -->
+                            <div id="anomalyActiveView" class="anomaly-state-view hidden">
+                                <div class="alert-banner">
+                                    <span class="alert-icon">⚠</span>
+                                    <span class="alert-title">ANOMALY DETECTED</span>
+                                </div>
+
+                                <div class="anomaly-details-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Type:</span>
+                                        <span class="detail-val highlight" id="detAnomalyType">Sudden Temp Spike</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Severity:</span>
+                                        <span id="detSeverityBadge" class="badge badge-danger">HIGH</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Confidence:</span>
+                                        <span class="detail-val" id="detConfidence">96.0%</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Detected At:</span>
+                                        <span class="detail-val mono" id="detTimestamp">14:21:36</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Station / Sensor:</span>
+                                        <span class="detail-val" id="detStationSensor">AWS-001 (Temp)</span>
+                                    </div>
+                                </div>
+
+                                <div class="cross-station-box">
+                                    <span class="box-tag">CROSS-STATION EVENT CHECK:</span>
+                                    <p id="detEventAttribution">Probable Sensor/Data Anomaly (Isolated to AWS-001)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MULTI-CHANNEL DISPATCH SIMULATION CARD -->
+                        <div class="panel-card dispatch-panel">
+                            <div class="panel-header">
+                                <h3>REAL-TIME ALERT DISPATCH CHANNELS</h3>
+                                <span class="badge badge-info">Multi-Channel Active</span>
+                            </div>
+
+                            <div class="dispatch-channels-grid">
+                                <div class="dispatch-item">
+                                    <div class="disp-icon">📱</div>
+                                    <div class="disp-info">
+                                        <span class="disp-title">SMS Dispatch (Station Manager)</span>
+                                        <span class="disp-detail mono" id="dispSmsText">Target: +91 98765-XXXXX | Ready</span>
+                                    </div>
+                                    <span class="badge badge-success" id="dispSmsBadge">ONLINE</span>
+                                </div>
+
+                                <div class="dispatch-item">
+                                    <div class="disp-icon">📧</div>
+                                    <div class="disp-info">
+                                        <span class="disp-title">Email Alert (IMD Control Center)</span>
+                                        <span class="disp-detail mono" id="dispEmailText">Target: alert@imd.gov.in | Ready</span>
+                                    </div>
+                                    <span class="badge badge-success" id="dispEmailBadge">ONLINE</span>
+                                </div>
+
+                                <div class="dispatch-item">
+                                    <div class="disp-icon">🌐</div>
+                                    <div class="disp-info">
+                                        <span class="disp-title">Emergency Webhook Dispatch</span>
+                                        <span class="disp-detail mono" id="dispWebhookText">Endpoint: https://api.imd-aws.gov.in/v1/alerts</span>
+                                    </div>
+                                    <span class="badge badge-success" id="dispWebhookBadge">200 OK</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EXPLAINABLE AI PANEL -->
+                        <div class="panel-card xai-panel">
+                            <div class="panel-header">
+                                <h3>EXPLAINABLE AI (XAI)</h3>
+                                <span class="panel-sub-tag">FEATURE ATTRIBUTION BREAKDOWN</span>
+                            </div>
+
+                            <div class="xai-content">
+                                <ul class="reasoning-bullets" id="xaiBullets">
+                                    <li>Observed values align closely with expected physical range.</li>
+                                    <li>Thermal rate of change is smooth and within physical limits.</li>
+                                    <li>Multivariate relationship between temperature, pressure, and humidity is consistent.</li>
+                                </ul>
+
+                                <div class="contribution-bars-section">
+                                    <h4>Feature Attribution Score Breakdown</h4>
+                                    
+                                    <div class="bar-group">
+                                        <div class="bar-label"><span>Temperature Deviation</span><span id="valTempDevBar">10%</span></div>
+                                        <div class="bar-track"><div class="bar-fill" id="fillTempDev" style="width: 10%;"></div></div>
+                                    </div>
+
+                                    <div class="bar-group">
+                                        <div class="bar-label"><span>Rate of Change</span><span id="valRocBar">5%</span></div>
+                                        <div class="bar-track"><div class="bar-fill" id="fillRoc" style="width: 5%;"></div></div>
+                                    </div>
+
+                                    <div class="bar-group">
+                                        <div class="bar-label"><span>Multivariate Inconsistency</span><span id="valMultiBar">5%</span></div>
+                                        <div class="bar-track"><div class="bar-fill" id="fillMulti" style="width: 5%;"></div></div>
+                                    </div>
+
+                                    <div class="bar-group">
+                                        <div class="bar-label"><span>Historical Temporal Deviation</span><span id="valHistBar">8%</span></div>
+                                        <div class="bar-track"><div class="bar-fill" id="fillHist" style="width: 8%;"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DATA QUALITY CORRECTION & AI ESTIMATION -->
+                        <div class="panel-card estimation-card">
+                            <div class="panel-header">
+                                <h3>DATA QUALITY CORRECTION</h3>
+                                <span id="qualityStatusBadge" class="badge badge-success">Data Valid</span>
+                            </div>
+
+                            <div class="estimation-grid">
+                                <div class="est-box original-box">
+                                    <span class="est-label">Original Observation:</span>
+                                    <span class="est-value mono" id="origValueDisplay">31.4 °C</span>
+                                </div>
+
+                                <div class="est-arrow">→</div>
+
+                                <div class="est-box ai-box">
+                                    <span class="est-label">AI Estimated Value:</span>
+                                    <span class="est-value mono highlight-teal" id="estValueDisplay">31.4 °C</span>
+                                </div>
+                            </div>
+                            <p class="est-note">Raw physical observation is preserved in immutable database. AI estimated value is available for downstream weather modeling.</p>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT SIDE: FULL ANOMALY HISTORY TABLE -->
+                    <div class="audit-column-side">
+                        <div class="panel-card table-panel">
+                            <div class="panel-header">
+                                <h3>ANOMALY AUDIT TRAIL</h3>
+                                <span class="badge badge-info" id="historyCountBadge">0 Events</span>
+                            </div>
+                            <div class="table-scroll audit-table-scroll">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Station</th>
+                                            <th>Target Sensor</th>
+                                            <th>Anomaly Type</th>
+                                            <th>Severity</th>
+                                            <th>Confidence</th>
+                                            <th>Attribution</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="anomalyTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-muted text-center">No anomalies logged. Use the Injection Studio to simulate faults.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- TAB VIEW 4: HARDWARE DIAGNOSTICS -->
+            <section id="tabHardware" class="tab-view">
+                <div class="hardware-grid">
+                    
+                    <!-- TRANSDUCER DIAGNOSTIC CARDS -->
+                    <div class="diag-cards-row">
+                        <div class="diag-card">
+                            <div class="diag-header">
+                                <span class="diag-icon">🌡</span>
+                                <div>
+                                    <h4>Temperature Probe</h4>
+                                    <p class="mono text-muted">Model: PT100 RTD</p>
+                                </div>
+                            </div>
+                            <div class="diag-metrics">
+                                <div class="diag-m-item"><span>Baseline State:</span> <strong id="diagTempBase">31.2 °C</strong></div>
+                                <div class="diag-m-item"><span>Zero Offset Drift:</span> <strong id="diagTempOffset" class="mono text-emerald">0.0 °C</strong></div>
+                                <div class="diag-m-item"><span>Transducer Status:</span> <span id="diagTempStatus" class="badge badge-success">HEALTHY</span></div>
+                            </div>
+                        </div>
+
+                        <div class="diag-card">
+                            <div class="diag-header">
+                                <span class="diag-icon">⏲</span>
+                                <div>
+                                    <h4>Barometric Transducer</h4>
+                                    <p class="mono text-muted">Model: MS5611 Piezoresistive</p>
+                                </div>
+                            </div>
+                            <div class="diag-metrics">
+                                <div class="diag-m-item"><span>Baseline State:</span> <strong id="diagPresBase">1012.6 hPa</strong></div>
+                                <div class="diag-m-item"><span>Zero Offset Drift:</span> <strong id="diagPresOffset" class="mono text-emerald">0.0 hPa</strong></div>
+                                <div class="diag-m-item"><span>Transducer Status:</span> <span id="diagPresStatus" class="badge badge-success">HEALTHY</span></div>
+                            </div>
+                        </div>
+
+                        <div class="diag-card">
+                            <div class="diag-header">
+                                <span class="diag-icon">💧</span>
+                                <div>
+                                    <h4>Hygrometer Transducer</h4>
+                                    <p class="mono text-muted">Model: Capacitive Polymer</p>
+                                </div>
+                            </div>
+                            <div class="diag-metrics">
+                                <div class="diag-m-item"><span>Baseline State:</span> <strong id="diagHumBase">67.0 %</strong></div>
+                                <div class="diag-m-item"><span>Zero Offset Drift:</span> <strong id="diagHumOffset" class="mono text-emerald">0.0 %</strong></div>
+                                <div class="diag-m-item"><span>Transducer Status:</span> <span id="diagHumStatus" class="badge badge-success">HEALTHY</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DIAGNOSTICS DETAILED PANELS -->
+                    <div class="diag-details-row">
+                        
+                        <!-- SENSOR HEALTH PROGRESS BARS -->
+                        <div class="panel-card health-panel half">
+                            <div class="panel-header">
+                                <h3>SENSOR HEALTH DIAGNOSTICS</h3>
+                                <span id="healthOverallBadge" class="badge badge-success">HEALTHY</span>
+                            </div>
+
+                            <div class="health-metrics">
+                                <div class="health-item">
+                                    <div class="health-info">
+                                        <span>Temperature Sensor Health</span>
+                                        <span class="health-pct" id="tempHealthPct">98%</span>
+                                    </div>
+                                    <div class="bar-track"><div class="bar-fill fill-green" id="tempHealthBar" style="width: 98%;"></div></div>
+                                </div>
+
+                                <div class="health-item">
+                                    <div class="health-info">
+                                        <span>Pressure Transducer Health</span>
+                                        <span class="health-pct" id="presHealthPct">100%</span>
+                                    </div>
+                                    <div class="bar-track"><div class="bar-fill fill-green" id="presHealthBar" style="width: 100%;"></div></div>
+                                </div>
+
+                                <div class="health-item">
+                                    <div class="health-info">
+                                        <span>Humidity Sensor Health</span>
+                                        <span class="health-pct" id="humHealthPct">97%</span>
+                                    </div>
+                                    <div class="bar-track"><div class="bar-fill fill-green" id="humHealthBar" style="width: 97%;"></div></div>
+                                </div>
+                            </div>
+
+                            <div class="action-box">
+                                <span class="action-label">RECOMMENDED ACTION:</span>
+                                <p id="recommendedActionText">System operating normally. Routine maintenance schedule active.</p>
+                            </div>
+                        </div>
+
+                        <!-- TELEMETRY NETWORK & SIGNAL DIAGNOSTICS -->
+                        <div class="panel-card telemetry-diag-panel half">
+                            <div class="panel-header">
+                                <h3>TELEMETRY SIGNAL & BUS DIAGNOSTICS</h3>
+                                <span class="badge badge-info">RS485 Modbus</span>
+                            </div>
+
+                            <div class="diag-signal-grid">
+                                <div class="signal-item">
+                                    <span class="sig-label">Signal Strength (RSSI):</span>
+                                    <span class="sig-val mono text-emerald" id="diagRssi">-68 dBm (Excellent)</span>
+                                </div>
+                                <div class="signal-item">
+                                    <span class="sig-label">Packet Loss Rate:</span>
+                                    <span class="sig-val mono" id="diagPacketLoss">0.1%</span>
+                                </div>
+                                <div class="signal-item">
+                                    <span class="sig-label">Solar Power Supply:</span>
+                                    <span class="sig-val mono text-emerald">13.8V DC (Charging)</span>
+                                </div>
+                                <div class="signal-item">
+                                    <span class="sig-label">Battery Backup:</span>
+                                    <span class="sig-val mono text-emerald">12.6V (100%)</span>
+                                </div>
+                                <div class="signal-item">
+                                    <span class="sig-label">Firmware Build:</span>
+                                    <span class="sig-val mono">v2.4.12-pro</span>
+                                </div>
+                                <div class="signal-item">
+                                    <span class="sig-label">Uptime:</span>
+                                    <span class="sig-val mono">14 days 06h 42m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Custom Dashboard JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

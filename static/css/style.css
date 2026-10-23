@@ -1,0 +1,69 @@
+/* SkyGuard AI - High-Contrast Light Mode Styling */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #F8FAFC;
+}
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+.leaflet-container {
+    background: #F8FAFC !important;
+    border-radius: 0.5rem;
+    font-family: inherit;
+}
+
+.pulse-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+}
+
+.pulse-indicator.red { background: #EF4444; box-shadow: 0 0 8px #EF4444; }
+.pulse-indicator.green { background: #10B981; box-shadow: 0 0 8px #10B981; }
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.25); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    background: #FFFFFF;
+    border: 1px solid #2563EB;
+    color: #0F172A;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    animation: toastIn 0.25s ease-out;
+}
+.toast.success { border-color: #10B981; background: #F0FDF4; color: #065F46; }
+.toast.warning { border-color: #F59E0B; background: #FFFBEB; color: #92400E; }
+.toast.error { border-color: #EF4444; background: #FEF2F2; color: #991B1B; }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
